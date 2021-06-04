@@ -72,7 +72,6 @@ void drawImage(){
                 }
                 break;
               default:
-                Serial.println(F("unknown"));
                 break;
             }
           }

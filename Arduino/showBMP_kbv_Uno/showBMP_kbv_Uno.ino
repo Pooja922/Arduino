@@ -47,8 +47,13 @@ void loop(){
     mnt=hr=00;
   }
   drawTime();
-  while(hr==6&&mnt>=3&&mnt<5){
-    char *nm = namebuf + pathlen;
+  while(hr==6&&mnt>=3&&mnt<4){
+    drawImage();
+  }
+}
+void drawImage(){
+  Serial.begin(9600);
+  char *nm = namebuf + pathlen;
   File f = root.openNextFile();
   uint8_t ret;
   uint32_t start;
@@ -62,26 +67,18 @@ void loop(){
           f.close();
           strlwr(nm);
           if (strstr(nm, ".bmp") != NULL && strstr(nm, NAMEMATCH) != NULL) {
-            Serial.print(namebuf);
-            Serial.print(F(" - "));
             tft.fillScreen(0);
             start = millis();
             ret = showBMP(namebuf, 5, 5);
             switch (ret) {
               case 0:
-                Serial.print(millis() - start);
-                Serial.println(F("ms"));
-                delay(60000);
-                break;
-              default:
-                Serial.println(F("unknown"));
+              delay(55000);
+              mnt=mnt+1;
                 break;
             }
           }
   }
   else root.rewindDirectory();
-    break;
-  }
 }
 #define BMPIMAGEOFFSET 54
 
@@ -133,19 +130,11 @@ uint8_t showBMP(char *nm, int x, int y)
   bmpDepth = read16(bmpFile); // bits per pixel
   pos = read32(bmpFile);      // format
   if (bmpID != 0x4D42) ret = 2; // bad ID
-  else if (n != 1) ret = 3;   // too many planes
-  else if (pos != 0 && pos != 3) ret = 4; // format: 0 = uncompressed, 3 = 565
-  else if (bmpDepth < 16 && bmpDepth > PALETTEDEPTH) ret = 5; // palette
   else {
     bool first = true;
     is565 = (pos == 3);               // ?already in 16-bit format
     // BMP rows are padded (if needed) to 4-byte boundary
     rowSize = (bmpWidth * bmpDepth / 8 + 3) & ~3;
-    if (bmpHeight < 0) {              // If negative, image is in top-down order.
-      bmpHeight = -bmpHeight;
-      flip = false;
-    }
-
     w = bmpWidth;
     h = bmpHeight;
     if ((x + w) >= tft.width())       // Crop area to be loaded
@@ -154,7 +143,6 @@ uint8_t showBMP(char *nm, int x, int y)
       h = tft.height() - y;
 
     if (bmpDepth <= PALETTEDEPTH) {   // these modes have separate palette
-      //bmpFile.seek(BMPIMAGEOFFSET); //palette is always @ 54
       bmpFile.seek(bmpImageoffset - (4 << bmpDepth)); //54 for regular, diff for colorsimportant
       bitmask = 0xFF;
       if (bmpDepth < 8)
@@ -227,11 +215,10 @@ uint8_t showBMP(char *nm, int x, int y)
         col += lcdidx;
       }           // end cols
     }               // end rows
-        tft.setAddrWindow(0, 0, tft.width() - 1, tft.height() - 1); //restore full screen
-        ret = 0;        // good render
+        drawText();
     }
     bmpFile.close();
-    return (ret);
+    return (0);
 }
 void drawText(){
   tft.setCursor(5, 280);
@@ -250,6 +237,7 @@ void drawText(){
     tft.print("After Eating    1"); 
 }
 void drawTime(){
+  tft.fillScreen(BLACK);
   tft.setTextSize(1);
   tft.setFont(&FreeSans18pt7b);
   tft.setCursor(5,30);
